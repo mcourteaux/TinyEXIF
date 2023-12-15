@@ -1,3 +1,4 @@
+// vim: noexpandtab sw=4 ts=4
 /*
   TinyEXIF.cpp -- A simple ISO C++ library to parse basic EXIF and XMP
                   information from a JPEG file.
@@ -9,25 +10,25 @@
   Based on the easyexif library (2013 version)
     https://github.com/mayanklahiri/easyexif
   of Mayank Lahiri (mlahiri@gmail.com).
-  
-  Redistribution and use in source and binary forms, with or without 
+
+  Redistribution and use in source and binary forms, with or without
   modification, are permitted provided that the following conditions are met:
 
-   - Redistributions of source code must retain the above copyright notice, 
+   - Redistributions of source code must retain the above copyright notice,
      this list of conditions and the following disclaimer.
-   - Redistributions in binary form must reproduce the above copyright notice, 
-     this list of conditions and the following disclaimer in the documentation 
+   - Redistributions in binary form must reproduce the above copyright notice,
+     this list of conditions and the following disclaimer in the documentation
    and/or other materials provided with the distribution.
 
-  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY EXPRESS 
-  OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES 
-  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN 
-  NO EVENT SHALL THE FREEBSD PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, 
-  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, 
-  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, 
-  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY 
-  OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING 
-  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, 
+  THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS ``AS IS'' AND ANY EXPRESS
+  OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES
+  OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN
+  NO EVENT SHALL THE FREEBSD PROJECT OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT,
+  INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
+  BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+  DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY
+  OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING
+  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
   EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
@@ -47,9 +48,9 @@
 
 #ifdef _MSC_VER
 namespace {
-    int strcasecmp(const char* a, const char* b) {
-        return _stricmp(a, b);
-    }
+	int strcasecmp(const char* a, const char* b) {
+		return _stricmp(a, b);
+	}
 }
 #else
 #include <string.h>
@@ -376,12 +377,12 @@ void EXIFInfo::parseIFDImage(EntryParser& parser, unsigned& exif_sub_ifd_offset,
 		break;
 
 	case 0x011a:
-		// XResolution 
+		// XResolution
 		parser.Fetch(XResolution);
 		break;
 
 	case 0x011b:
-		// YResolution 
+		// YResolution
 		parser.Fetch(YResolution);
 		break;
 
@@ -501,7 +502,7 @@ void EXIFInfo::parseIFDExif(EntryParser& parser) {
 		break;
 
 	case 0x9204:
-		// Exposure bias value 
+		// Exposure bias value
 		parser.Fetch(ExposureBiasValue);
 		break;
 
@@ -626,6 +627,34 @@ void EXIFInfo::parseIFDExif(EntryParser& parser) {
 	case 0xa434:
 		// Lens model.
 		parser.Fetch(LensInfo.Model);
+		break;
+
+	case 0xc621:
+		// Color Matrix 1.
+		ColorCalibration.ColorMatrixLength = parser.GetLength();
+		for (int i = 0; i < ColorCalibration.ColorMatrixLength; ++i) {
+			parser.Fetch(ColorCalibration.ColorMatrix1[i], i);
+		}
+		break;
+
+	case 0xc622:
+		// Color Matrix 2.
+		ColorCalibration.ColorMatrixLength = parser.GetLength();
+		for (int i = 0; i < ColorCalibration.ColorMatrixLength; ++i) {
+			parser.Fetch(ColorCalibration.ColorMatrix2[i], i);
+		}
+		break;
+
+	case 0xc65a:
+		// Calibration Illuminant 1.
+		// TODO When reading 255, this means more information is actually stored as xy chromaticity or SPD.
+		parser.Fetch(ColorCalibration.CalibrationIlluminant1);
+		break;
+
+	case 0xc65b:
+		// Calibration Illuminant 2.
+		// TODO When reading 255, this means more information is actually stored as xy chromaticity or SPD.
+		parser.Fetch(ColorCalibration.CalibrationIlluminant2);
 		break;
 	}
 }
@@ -933,7 +962,7 @@ int EXIFInfo::parseFromEXIFSegment(const uint8_t* buf, unsigned len) {
 	// Now parsing the TIFF header. The first two bytes are either "II" or
 	// "MM" for Intel or Motorola byte alignment. Sanity check by parsing
 	// the uint16_t that follows, making sure it equals 0x2a. The
-	// last 4 bytes are an offset into the first IFD, which are added to 
+	// last 4 bytes are an offset into the first IFD, which are added to
 	// the global offset counter. For this block, we expect the following
 	// minimum size:
 	//  2 bytes: 'II' or 'MM'
@@ -1312,6 +1341,16 @@ void EXIFInfo::clear() {
 	MicroVideo.HasMicroVideo = 0;
 	MicroVideo.MicroVideoVersion = 0;
 	MicroVideo.MicroVideoOffset = 0;
+
+	// Color Callibration
+	ColorCalibration.ColorMatrixLength = 0;
+	for (int i = 0; i < 9; ++i) {
+		ColorCalibration.ColorMatrix1[i] = DBL_MAX;
+		ColorCalibration.ColorMatrix2[i] = DBL_MAX;
+	}
+	ColorCalibration.CalibrationIlluminant1 = 0;
+	ColorCalibration.CalibrationIlluminant2 = 0;
 }
 
 } // namespace TinyEXIF
+
